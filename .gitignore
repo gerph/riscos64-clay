@@ -5,3 +5,10 @@ cmake-build-release/
 build/
 node_modules/
 *.dSYM
+
+*.elf
+*.map
+*.o
+*,ff8
+*.syms
+
