@@ -23,6 +23,10 @@ typedef struct borderedges_s {
   int top, right, bottom, left;
 } borderedges_t;
 
+typedef struct bordercolours_s {
+  uint32_t top, right, bottom, left;
+} bordercolours_t;
+
 /*************************************************** Gerph *********
  Function:     border_draw
  Description:  Draw a border around a region

@@ -81,6 +81,199 @@ static void PlotText(Clay_RenderCommand *command) {
     font_losefont(font);
 }
 
+
+/*************************************************** Gerph *********
+ Function:     border_drawfull
+ Description:  Draw a border around a region with fully specified colours
+ Parameters:   colours = a block describing the colours of the edges,
+                         or COLOUR_NONE for no colour.
+               edges = a block describing the size of the edges
+               x,y,width,height = the thing that we're bordering,
+                                      top left corner
+ Returns:      none
+ ******************************************************************/
+void border_drawfull(bordercolours_t *colours,
+                     borderedges_t *edges,
+                     int x, int y, int width, int height)
+{
+    borderedges_t outer;
+    borderedges_t inner;
+    outer.top = y + height;
+    outer.bottom = y;
+    outer.left = x;
+    outer.right = x + width;
+    inner.top = y + height - edges->top;
+    inner.right = x + width - edges->right;
+    inner.bottom = y + edges->bottom;
+    inner.left = x + edges->left;
+
+    /* Shapes are in the form:
+        a b
+        c d
+     */
+    if (edges->top > 0 && colours->top != COLOUR_NONE)
+    {
+        uint32_t col = colours->top;
+        int xa, ya;
+        int xb, yb;
+        int xc, yc;
+        int xd, yd;
+        xa = outer.left;    ya = outer.top;
+        xb = outer.right;   yb = outer.top;
+        if (edges->left > 0 && colours->left != COLOUR_NONE)
+        {
+            xc = inner.left;    yc = inner.top;
+        }
+        else
+        {
+            xc = outer.left;    yc = inner.top;
+        }
+        if (edges->right > 0 && colours->right != COLOUR_NONE)
+        {
+            xd = inner.right;   yd = inner.top;
+        }
+        else
+        {
+            xd = outer.right;   yd = inner.top;
+        }
+        if (xa == xc && xb == xd)
+        {
+            rect_fill(col, xa, ya, xd, yd);
+        }
+        else
+        {
+            tri_fill(col, xa, ya,
+                          xc, yc,
+                          xb, yb);
+            tri_fill(col, xc, yc,
+                          xb, yb,
+                          xd, yd);
+        }
+    }
+
+    if (edges->right > 0 && colours->right != COLOUR_NONE)
+    {
+        uint32_t col = colours->right;
+        int xa, ya;
+        int xb, yb;
+        int xc, yc;
+        int xd, yd;
+        xb = outer.right;   yb = outer.top;
+        xd = outer.right;   yd = outer.bottom;
+        if (edges->top > 0 && colours->top != COLOUR_NONE)
+        {
+            xa = inner.right;   ya = inner.top;
+        }
+        else
+        {
+            xa = inner.right;   ya = outer.top;
+        }
+        if (edges->bottom > 0 && colours->bottom != COLOUR_NONE)
+        {
+            xc = inner.right;   yc = inner.bottom;
+        }
+        else
+        {
+            xc = inner.right;   yc = outer.bottom;
+        }
+        if (ya == yb && yc == yd)
+        {
+            rect_fill(col, xa, ya, xd, yd);
+        }
+        else
+        {
+            tri_fill(col, xa, ya,
+                          xc, yc,
+                          xb, yb);
+            tri_fill(col, xc, yc,
+                          xb, yb,
+                          xd, yd);
+        }
+    }
+
+    if (edges->bottom > 0 && colours->bottom != COLOUR_NONE)
+    {
+        uint32_t col = colours->bottom;
+        int xa, ya;
+        int xb, yb;
+        int xc, yc;
+        int xd, yd;
+        xc = outer.left;    yc = outer.bottom;
+        xd = outer.right;   yd = outer.bottom;
+        if (edges->left > 0 && colours->left != COLOUR_NONE)
+        {
+            xa = inner.left;    ya = inner.bottom;
+        }
+        else
+        {
+            xa = outer.left;    ya = inner.bottom;
+        }
+        if (edges->right > 0 && colours->right != COLOUR_NONE)
+        {
+            xb = inner.right;   yb = inner.bottom;
+        }
+        else
+        {
+            xb = outer.right;   yb = inner.bottom;
+        }
+        if (xa == xc && xb == xd)
+        {
+            rect_fill(col, xa, ya, xd, yd);
+        }
+        else
+        {
+            tri_fill(col, xa, ya,
+                          xc, yc,
+                          xb, yb);
+            tri_fill(col, xc, yc,
+                          xb, yb,
+                          xd, yd);
+        }
+    }
+
+    if (edges->left > 0 && colours->left != COLOUR_NONE)
+    {
+        uint32_t col = colours->left;
+        int xa, ya;
+        int xb, yb;
+        int xc, yc;
+        int xd, yd;
+        xa = outer.left;    ya = outer.top;
+        xc = outer.left;    yc = outer.bottom;
+        if (edges->top > 0 && colours->top != COLOUR_NONE)
+        {
+            xb = inner.left;    yb = inner.top;
+        }
+        else
+        {
+            xb = inner.left;    yb = outer.top;
+        }
+        if (edges->bottom > 0 && colours->bottom != COLOUR_NONE)
+        {
+            xd = inner.left;    yd = inner.bottom;
+        }
+        else
+        {
+            xd = inner.left;    yd = outer.bottom;
+        }
+        if (ya == yb && yc == yd)
+        {
+            rect_fill(col, xa, ya, xd, yd);
+        }
+        else
+        {
+            tri_fill(col, xa, ya,
+                          xc, yc,
+                          xb, yb);
+            tri_fill(col, xc, yc,
+                          xb, yb,
+                          xd, yd);
+        }
+    }
+}
+
+
+
 // Layout the first page.
 void Layout() {
     static Clay_Color PRIMARY = { 0xa8, 0x42, 0x1c, 255 };
@@ -238,153 +431,20 @@ int main(int argc, char *argv[])
                     Clay_BorderElementConfig *config = command->config.borderElementConfig;
                     Clay_BoundingBox bb = command->boundingBox;
 
-                    borderedges_t outer;
-                    borderedges_t inner;
-                    outer.top = Y(bb.y + bb.height);
-                    outer.bottom = Y(bb.y);
-                    outer.left = X(bb.x);
-                    outer.right = X(bb.x + bb.width);
-                    inner.top = Y(bb.y + bb.height - config->top.width);
-                    inner.right = X(bb.x + bb.width - config->right.width);
-                    inner.bottom = Y(bb.y + config->bottom.width);
-                    inner.left = X(bb.x + config->bottom.width);
+                    bordercolours_t colours;
+                    borderedges_t edges;
+                    colours.top = COLOUR_RGB(config->top.color.r, config->top.color.g, config->top.color.b);
+                    colours.bottom = COLOUR_RGB(config->bottom.color.r, config->bottom.color.g, config->bottom.color.b);
+                    colours.left = COLOUR_RGB(config->left.color.r, config->left.color.g, config->left.color.b);
+                    colours.right = COLOUR_RGB(config->right.color.r, config->right.color.g, config->right.color.b);
+                    edges.top = H(config->top.width);
+                    edges.right = W(config->right.width);
+                    edges.bottom = H(config->bottom.width);
+                    edges.left = W(config->left.width);
 
-
-                    /* Shapes are in the form:
-                        a b
-                        c d
-                     */
-                    if (config->top.width > 0)
-                    {
-                        uint32_t col = COLOUR_RGB(config->top.color.r, config->top.color.g, config->top.color.b);
-                        int xa, ya;
-                        int xb, yb;
-                        int xc, yc;
-                        int xd, yd;
-                        xa = outer.left;    ya = outer.top;
-                        xb = outer.right;   yb = outer.top;
-                        if (config->left.width)
-                        {
-                            xc = inner.left;    yc = inner.top;
-                        }
-                        else
-                        {
-                            xc = outer.left;    yc = inner.top;
-                        }
-                        if (config->right.width)
-                        {
-                            xd = inner.right;   yd = inner.top;
-                        }
-                        else
-                        {
-                            xd = outer.right;   yd = inner.top;
-                        }
-                        tri_fill(col, xa, ya,
-                                      xc, yc,
-                                      xb, yb);
-                        tri_fill(col, xc, yc,
-                                      xb, yb,
-                                      xd, yd);
-                    }
-
-                    if (config->right.width > 0)
-                    {
-                        uint32_t col = COLOUR_RGB(config->right.color.r, config->right.color.g, config->right.color.b);
-                        int xa, ya;
-                        int xb, yb;
-                        int xc, yc;
-                        int xd, yd;
-                        xb = outer.right;   yb = outer.top;
-                        xd = outer.right;   yd = outer.bottom;
-                        if (config->top.width)
-                        {
-                            xa = inner.right;   ya = inner.top;
-                        }
-                        else
-                        {
-                            xa = inner.right;   ya = outer.top;
-                        }
-                        if (config->bottom.width)
-                        {
-                            xc = inner.right;   yc = inner.bottom;
-                        }
-                        else
-                        {
-                            xc = inner.right;   yc = outer.bottom;
-                        }
-                        tri_fill(col, xa, ya,
-                                      xc, yc,
-                                      xb, yb);
-                        tri_fill(col, xc, yc,
-                                      xb, yb,
-                                      xd, yd);
-                    }
-
-                    if (config->bottom.width > 0)
-                    {
-                        uint32_t col = COLOUR_RGB(config->bottom.color.r, config->bottom.color.g, config->bottom.color.b);
-                        int xa, ya;
-                        int xb, yb;
-                        int xc, yc;
-                        int xd, yd;
-                        xc = outer.left;    yc = outer.bottom;
-                        xd = outer.right;   yd = outer.bottom;
-                        if (config->left.width)
-                        {
-                            xa = inner.left;    ya = inner.bottom;
-                        }
-                        else
-                        {
-                            xa = outer.left;    ya = inner.bottom;
-                        }
-                        if (config->right.width)
-                        {
-                            xb = inner.right;   yb = inner.bottom;
-                        }
-                        else
-                        {
-                            xb = outer.right;   yb = inner.bottom;
-                        }
-                        tri_fill(col, xa, ya,
-                                      xc, yc,
-                                      xb, yb);
-                        tri_fill(col, xc, yc,
-                                      xb, yb,
-                                      xd, yd);
-                    }
-
-                    if (config->left.width > 0)
-                    {
-                        uint32_t col = COLOUR_RGB(config->left.color.r, config->left.color.g, config->left.color.b);
-                        int xa, ya;
-                        int xb, yb;
-                        int xc, yc;
-                        int xd, yd;
-                        xa = outer.left;    ya = outer.top;
-                        xc = outer.left;    yc = outer.bottom;
-                        if (config->top.width)
-                        {
-                            xb = inner.left;    yb = inner.top;
-                        }
-                        else
-                        {
-                            xb = inner.left;    yb = outer.top;
-                        }
-                        if (config->bottom.width)
-                        {
-                            xd = inner.left;    yd = inner.bottom;
-                        }
-                        else
-                        {
-                            xd = inner.left;    yd = outer.bottom;
-                        }
-                        tri_fill(col, xa, ya,
-                                      xc, yc,
-                                      xb, yb);
-                        tri_fill(col, xc, yc,
-                                      xb, yb,
-                                      xd, yd);
-                    }
+                    border_drawfull(&colours,
+                                    &edges,
+                                    X(bb.x), Y(bb.y + bb.height), W(bb.width), H(bb.height));
                 }
                 break;
 
