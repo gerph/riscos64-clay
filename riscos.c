@@ -14,7 +14,7 @@
 #include "swis.h"
 #endif
 
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
 #define dprintf if (1) printf
@@ -26,6 +26,8 @@
 #define screenWidth ((21.0 / 2.54) * 72)
 #define screenHeight ((29.7 / 2.54) * 72)
 bounds_t screen;
+
+gcontext_t *gc;
 
 #define X(_p) ((int)( ((_p) * (screen.height - 4) / screenHeight) ))
 #define Y(_p) ((int)( screen.height - 4 - ((_p) * (screen.height - 4) / screenHeight) ))
@@ -50,9 +52,9 @@ static inline Clay_Dimensions MeasureText(Clay_String *text, Clay_TextElementCon
     int32_t xsize = W(config->fontSize / 2.5 * 16);
     int32_t ysize = H(config->fontSize / 2.5 * 16);
 
-    font_t font = font_findfont(FONT_NAME, xsize, ysize);
-    text_getstringsize(font, &bounds, -1, text->chars, text->length, -1);
-    font_losefont(font);
+    font_t font = gc->text_findfont(gc, FONT_NAME, xsize, ysize);
+    gc->text_getstringsize(gc, font, &bounds, -1, text->chars, text->length, -1);
+    gc->text_losefont(gc, font);
 
     dim.width = IW(bounds.xoffset);
     dim.height = IH(bounds.ascent + bounds.descent);
@@ -72,13 +74,13 @@ static void PlotText(Clay_RenderCommand *command) {
     int32_t xsize = W(config->fontSize / 2.5 * 16);
     int32_t ysize = H(config->fontSize / 2.5 * 16);
 
-    font_t font = font_findfont(FONT_NAME, xsize, ysize);
+    font_t font = gc->text_findfont(gc, FONT_NAME, xsize, ysize);
     //printf("Plot text '%.*s' %i pt @ %i, %i\n", text->length, text->chars, config->fontSize, (int)bb.x, (int)bb.y);
-    text_paint(font, X(bb.x), Y(bb.y + bb.height),
+    gc->text_paint(gc, font, X(bb.x), Y(bb.y + bb.height),
                0, COLOUR_RGB(color.r, color.g, color.b),
                text->chars,
                text->length);
-    font_losefont(font);
+    gc->text_losefont(gc, font);
 }
 
 
@@ -166,7 +168,9 @@ int main(int argc, char *argv[])
 {
 
 #ifdef __riscos
-    gcontext_initvdu(1);
+    gc = gcontext_initvdu(1);
+    if (gc == NULL)
+        abort();
     {
         int32_t mode_selector[] = {
             1, /* Flags */
@@ -223,14 +227,14 @@ int main(int argc, char *argv[])
                     dprintf("bb.width = %i\n", (int)bb.width);
                     dprintf("bb.height = %i\n", (int)bb.height);
 #ifdef __riscos
-                    rect_fillrgb(color.r, color.g, color.b,
-                                 X(bb.x), Y(bb.y),
-                                 X(bb.x + bb.width),
-                                 Y(bb.y + bb.height));
+                    gc->rectangle_fill(gc, COLOUR_RGB(color.r, color.g, color.b),
+                                       X(bb.x), Y(bb.y),
+                                       X(bb.x + bb.width),
+                                       Y(bb.y + bb.height));
                     dprintf("  %i, %i, %i, %i\n",
-                                 X(bb.x), Y(bb.y),
-                                 X(bb.x + bb.width),
-                                 Y(bb.y + bb.height));
+                            X(bb.x), Y(bb.y),
+                            X(bb.x + bb.width),
+                            Y(bb.y + bb.height));
 #endif
                 }
                 break;
@@ -251,7 +255,7 @@ int main(int argc, char *argv[])
                     edges.bottom = H(config->bottom.width);
                     edges.left = W(config->left.width);
 
-                    border_drawfull(&colours,
+                    border_drawfull(gc, &colours,
                                     &edges,
                                     X(bb.x), Y(bb.y + bb.height), W(bb.width), H(bb.height));
                 }
@@ -287,11 +291,19 @@ int main(int argc, char *argv[])
 
 #ifdef __riscos
     //_swix(OS_ReadC, 0);
+#if 0
     time_t start = time(NULL);
     while (time(NULL) - start < 3)
     {
         _swix(OS_Byte, _IN(0), 19);
     }
+#else
+    time_t start = clock();
+    while (clock() - start < 3 * 100)
+    {
+        _swix(OS_Byte, _IN(0), 19);
+    }
+#endif
 #endif
 
     return 0;

@@ -25,8 +25,6 @@
 #define dprintf if (0) _swix(0x104,0), printf
 #endif
 
-gcontext_t gcontext;
-
 /*************************************************** Gerph *********
  Function:     gcontext_generic_rectoutline
  Description:  Outline a rectangle
@@ -35,15 +33,16 @@ gcontext_t gcontext;
                x1,y1 = top right
  Returns:      none
  ******************************************************************/
-static void gcontext_generic_rectoutline(uint32_t colour,
+static void gcontext_generic_rectoutline(gcontext_t *gc,
+                                         uint32_t colour,
                                          int x0, int y0, int x1, int y1)
 {
-    line_start(colour);
-    line(x0,y0,x0,y1);
-    line(x0,y1,x1,y1);
-    line(x1,y1,x1,y0);
-    line(x1,y0,x0,y0);
-    line_end();
+    gc->line_start(gc, colour);
+    gc->line_line(gc, x0,y0,x0,y1);
+    gc->line_line(gc, x0,y1,x1,y1);
+    gc->line_line(gc, x1,y1,x1,y0);
+    gc->line_line(gc, x1,y0,x0,y0);
+    gc->line_end(gc);
 }
 
 
@@ -51,51 +50,47 @@ static void gcontext_generic_rectoutline(uint32_t colour,
  Function:     gcontext_initvdu
  Description:  Initialise the graphics context for the VDU system
  Parameters:   fonts = 1 if we should use fonts
- Returns:      none
+ Returns:      gcontext_t to use for plotting, or NULL if unavailable
  ******************************************************************/
-void gcontext_initvdu(int fonts)
+gcontext_t *gcontext_initvdu(int fonts)
 {
-  gcontext.rectangle_fill = gcontext_vdu_rectfill;
-  gcontext.rectangle_outline = gcontext_generic_rectoutline;
-  gcontext.line_start = gcontext_vdu_linestart;
-  gcontext.line_line = gcontext_vdu_line;
-  gcontext.line_end = gcontext_vdu_lineend;
-  gcontext.fill_start = NULL; /* We don't have any 'fill' routines */
-  gcontext.triangle_fill = gcontext_vdu_trifill;
-  if (!fonts)
-  {
-    gcontext.text_findfont = (font_t(*)(const char *, int, int))vdu5_findfont;
-    gcontext.text_losefont = (void(*)(font_t))vdu5_losefont;
-    gcontext.text_getstringsize = (void(*)(font_t, stringbounds_t *, int,
-                                           const char *, int, char))(vdu5_getstringsize);
-    gcontext.text_getemsize = vdu5_getem;
-    gcontext.text_paint = (coords_t(*)(font_t,int,int,
-                                       uint32_t,uint32_t,
-                                       const char *,int))(vdu5_paint);
-    gcontext.text_paintattrib = (coords_t(*)(font_t,int,int,int,int,
-                                             const char *,int,
-                                             uint32_t,uint32_t,
-                                             uint32_t))(vdu5_paintattrib);
-  }
-  else
-  {
-    gcontext.text_findfont = (font_t(*)(const char *, int32_t, int32_t))font_findfont;
-    gcontext.text_losefont = (void(*)(font_t))font_losefont;
-    gcontext.text_getstringsize = (void(*)(font_t, stringbounds_t *, int32_t,
-                                           const char *, int32_t, char))(font_getstringsize);
-    gcontext.text_getemsize = font_getem;
-    gcontext.text_paint = (coords_t(*)(font_t,int,int,
-                                       uint32_t,uint32_t,
-                                       const char *,int))(font_paint);
-    gcontext.text_paintattrib = (coords_t(*)(font_t,int32_t,int32_t,int32_t,int32_t,
-                                             const char *,int32_t,uint32_t,uint32_t,
-                                             uint32_t))(font_paintattrib);
-  }
+    gcontext_t *gc = calloc(sizeof(*gc), 1);
+    if (gc == NULL)
+        return NULL;
+
+    gc->rectangle_fill = gcontext_vdu_rectfill;
+    gc->rectangle_outline = gcontext_generic_rectoutline;
+    gc->line_start = gcontext_vdu_linestart;
+    gc->line_line = gcontext_vdu_line;
+    gc->line_dotted = gcontext_vdu_linedotted;
+    gc->line_dashed = gcontext_vdu_linedashed;
+    gc->line_end = gcontext_vdu_lineend;
+    gc->fill_start = NULL; /* We don't have any 'fill' routines */
+    gc->triangle_fill = gcontext_vdu_trifill;
+    if (!fonts)
+    {
+        gc->text_findfont = vdu5_findfont;
+        gc->text_losefont = vdu5_losefont;
+        gc->text_getstringsize = vdu5_getstringsize;
+        gc->text_getemsize = vdu5_getem;
+        gc->text_paint = vdu5_paint;
+        gc->text_paintattrib = vdu5_paintattrib;
+    }
+    else
+    {
+        gc->text_findfont = font_findfont;
+        gc->text_losefont = font_losefont;
+        gc->text_getstringsize = font_getstringsize;
+        gc->text_getemsize = font_getem;
+        gc->text_paint = font_paint;
+        gc->text_paintattrib = font_paintattrib;
+    }
 #ifdef DEBUG_FILL
-  gcontext.fill_start = gcontext_vdu_fill_start;
-  gcontext.fill_move = gcontext_vdu_fill_move;
-  gcontext.fill_line = gcontext_vdu_fill_line;
-  gcontext.fill_close = gcontext_vdu_fill_close;
-  gcontext.fill_end = gcontext_vdu_fill_end;
+    gc->fill_start = gcontext_vdu_fill_start;
+    gc->fill_move = gcontext_vdu_fill_move;
+    gc->fill_line = gcontext_vdu_fill_line;
+    gc->fill_close = gcontext_vdu_fill_close;
+    gc->fill_end = gcontext_vdu_fill_end;
 #endif
+    return gc;
 }

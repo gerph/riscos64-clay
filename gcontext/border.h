@@ -8,6 +8,8 @@
 #ifndef BORDER_H
 #define BORDER_H
 
+#include <stdint.h>
+
 typedef enum bordertype_e {
   bt_none,
   bt_solid,
@@ -30,7 +32,8 @@ typedef struct bordercolours_s {
 /*************************************************** Gerph *********
  Function:     border_draw
  Description:  Draw a border around a region
- Parameters:   type = the type of border we should draw
+ Parameters:   gc-> the context to use
+               type = the type of border we should draw
                edges = a block describing the size of the edges
                x,y,width,height = the thing that we're bordering,
                                       top left corner
@@ -38,15 +41,17 @@ typedef struct bordercolours_s {
                opp = the darker colour, or COLOUR_NONE
  Returns:      none
  ******************************************************************/
-void border_draw(bordertype_t type,
+void border_draw(gcontext_t *gc,
+                 bordertype_t type,
                  borderedges_t *edges,
                  int x, int y, int width, int height,
-                 unsigned long face, unsigned long opp);
+                 uint32_t face, uint32_t opp);
 
 /*************************************************** Gerph *********
  Function:     border_drawsimple
  Description:  Draw a simplified border
- Parameters:   type = the type of border we should draw
+ Parameters:   gc-> the context to use
+               type = the type of border we should draw
                size = the border size
                x,y,width,height = the thing that we're bordering,
                                       top left corner
@@ -54,9 +59,10 @@ void border_draw(bordertype_t type,
                opp = the darker colour, or COLOUR_NONE
  Returns:      none
  ******************************************************************/
-void border_drawsimple(bordertype_t type, int size,
+void border_drawsimple(gcontext_t *gc,
+                       bordertype_t type, int size,
                        int x, int y, int width, int height,
-                       unsigned long face, unsigned long opp);
+                       uint32_t face, uint32_t opp);
 
 
 /*************************************************** Gerph *********
@@ -69,7 +75,8 @@ void border_drawsimple(bordertype_t type, int size,
                                       top left corner
  Returns:      none
  ******************************************************************/
-void border_drawfull(bordercolours_t *colours,
+void border_drawfull(gcontext_t *gc,
+                     bordercolours_t *colours,
                      borderedges_t *edges,
                      int x, int y, int width, int height);
 

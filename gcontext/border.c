@@ -26,10 +26,10 @@
 #define dprintf if (0) _swix(0x104,0), printf
 #endif
 
-static void get_shadow_colours(unsigned long colour,
-                               unsigned long *lightp, unsigned long *darkp)
+static void get_shadow_colours(uint32_t colour,
+                               uint32_t *lightp, uint32_t *darkp)
 {
-  int r,g,b;
+  int32_t r,g,b;
   /* Make r,g,b into the dark colour */
 #define SLAB_DEPTH (0x60)
   r = (colour >> 8) & 255;
@@ -51,9 +51,10 @@ static void get_shadow_colours(unsigned long colour,
   *lightp = COLOUR_RGB(r+SLAB_DEPTH, g+SLAB_DEPTH, b+SLAB_DEPTH);
 }
 
-static void border_intdraw(borderedges_t *edges,
+static void border_intdraw(gcontext_t *gc,
+                           borderedges_t *edges,
                            int x, int y, int width, int height,
-                           unsigned long tl, unsigned long br)
+                           uint32_t tl, uint32_t br)
 {
   int more;
 #if 0
@@ -100,8 +101,9 @@ static void border_intdraw(borderedges_t *edges,
   {
     /* It's a 'solid' external border; no slab effect, so we can optimise
        the fill a little */
-    if (fill_start(tl))
+    if (gc->fill_start)
     {
+      gc->fill_start(gc, tl);
       /* We can use a path */
       /* 0-------------------1
          | 5---------------6 |
@@ -110,20 +112,20 @@ static void border_intdraw(borderedges_t *edges,
          | |               | |
          | 8---------------7 |
          3-------------------2 */
-      fill_move(outer.left,  outer.top);     /* 0 */
-      fill_line(outer.right, outer.top);     /* 1 */
-      fill_line(outer.right, outer.bottom);  /* 2 */
-      fill_line(outer.left,  outer.bottom);  /* 3 */
-      fill_line(outer.left,  outer.top);     /* 0 */
-      fill_close();
+      gc->fill_move(gc, outer.left,  outer.top);     /* 0 */
+      gc->fill_line(gc, outer.right, outer.top);     /* 1 */
+      gc->fill_line(gc, outer.right, outer.bottom);  /* 2 */
+      gc->fill_line(gc, outer.left,  outer.bottom);  /* 3 */
+      gc->fill_line(gc, outer.left,  outer.top);     /* 0 */
+      gc->fill_close(gc);
 
-      fill_move(inner.left,  inner.top);     /* 4 */
-      fill_line(inner.right, inner.top);     /* 5 */
-      fill_line(inner.right, inner.bottom);  /* 6 */
-      fill_line(inner.left,  inner.bottom);  /* 7 */
-      fill_line(inner.left,  inner.top);     /* 4 */
-      fill_close();
-      fill_end();
+      gc->fill_move(gc, inner.left,  inner.top);     /* 4 */
+      gc->fill_line(gc, inner.right, inner.top);     /* 5 */
+      gc->fill_line(gc, inner.right, inner.bottom);  /* 6 */
+      gc->fill_line(gc, inner.left,  inner.bottom);  /* 7 */
+      gc->fill_line(gc, inner.left,  inner.top);     /* 4 */
+      gc->fill_close(gc);
+      gc->fill_end(gc);
     }
     else
     {
@@ -135,17 +137,18 @@ static void border_intdraw(borderedges_t *edges,
          | |               | |
          | +---------------+-2
          +-1-----------------+ */
-      rect_fill(tl, outer.left, outer.top, inner.left, outer.bottom); /* 0->1 */
-      rect_fill(tl, inner.left, outer.bottom, outer.right, inner.bottom); /* 1->2 */
-      rect_fill(tl, outer.right, inner.bottom, inner.right, outer.top); /* 2->3 */
-      rect_fill(tl, inner.right, outer.top, inner.left, inner.top); /* 2->3 */
+      gc->rectangle_fill(gc, tl, outer.left, outer.top, inner.left, outer.bottom); /* 0->1 */
+      gc->rectangle_fill(gc, tl, inner.left, outer.bottom, outer.right, inner.bottom); /* 1->2 */
+      gc->rectangle_fill(gc, tl, outer.right, inner.bottom, inner.right, outer.top); /* 2->3 */
+      gc->rectangle_fill(gc, tl, inner.right, outer.top, inner.left, inner.top); /* 2->3 */
     }
   }
   else
   {
     /* It's a slabbed block */
-    if (fill_start(tl))
+    if (gc->fill_start)
     {
+      gc->fill_start(gc, tl);
       /*  0-------------5
           | 3----------4
           | |
@@ -153,15 +156,15 @@ static void border_intdraw(borderedges_t *edges,
           | 2
           1/
        */
-      fill_move(outer.left,  outer.top);     /* 0 */
-      fill_line(outer.left,  outer.bottom);  /* 1 */
-      fill_line(inner.left,  inner.bottom);  /* 2 */
-      fill_line(inner.left,  inner.top);     /* 3 */
-      fill_line(inner.right, inner.top);     /* 4 */
-      fill_line(outer.right, outer.top);     /* 5 */
-      fill_line(outer.left,  outer.top);     /* 0 */
-      fill_close();
-      fill_end();
+      gc->fill_move(gc, outer.left,  outer.top);     /* 0 */
+      gc->fill_line(gc, outer.left,  outer.bottom);  /* 1 */
+      gc->fill_line(gc, inner.left,  inner.bottom);  /* 2 */
+      gc->fill_line(gc, inner.left,  inner.top);     /* 3 */
+      gc->fill_line(gc, inner.right, inner.top);     /* 4 */
+      gc->fill_line(gc, outer.right, outer.top);     /* 5 */
+      gc->fill_line(gc, outer.left,  outer.top);     /* 0 */
+      gc->fill_close(gc);
+      gc->fill_end(gc);
 
       /*              /1
                      2 |
@@ -170,16 +173,16 @@ static void border_intdraw(borderedges_t *edges,
            4---------3 |
          5/------------0
        */
-      fill_start(br);
-      fill_move(outer.right,  outer.bottom); /* 0 */
-      fill_line(outer.right,  outer.top);    /* 1 */
-      fill_line(inner.right,  inner.top);    /* 2 */
-      fill_line(inner.right,  inner.bottom); /* 3 */
-      fill_line(inner.left,   inner.bottom); /* 4 */
-      fill_line(outer.left,   outer.bottom); /* 5 */
-      fill_line(outer.right,  outer.bottom); /* 0 */
-      fill_close();
-      fill_end();
+      gc->fill_start(gc, br);
+      gc->fill_move(gc, outer.right,  outer.bottom); /* 0 */
+      gc->fill_line(gc, outer.right,  outer.top);    /* 1 */
+      gc->fill_line(gc, inner.right,  inner.top);    /* 2 */
+      gc->fill_line(gc, inner.right,  inner.bottom); /* 3 */
+      gc->fill_line(gc, inner.left,   inner.bottom); /* 4 */
+      gc->fill_line(gc, outer.left,   outer.bottom); /* 5 */
+      gc->fill_line(gc, outer.right,  outer.bottom); /* 0 */
+      gc->fill_close(gc);
+      gc->fill_end(gc);
     }
     else
     {
@@ -190,21 +193,21 @@ static void border_intdraw(borderedges_t *edges,
           | 1
           0/
        */
-      tri_fill(tl, outer.left,  outer.bottom, /* 0 */
-                   inner.left,  inner.bottom, /* 1 */
-                   outer.left,  outer.top     /* 2 */);
+      gc->triangle_fill(gc, tl, outer.left,  outer.bottom, /* 0 */
+                                inner.left,  inner.bottom, /* 1 */
+                                outer.left,  outer.top     /* 2 */);
 
-      tri_fill(tl, inner.left,  inner.bottom, /* 1 */
-                   outer.left,  outer.top,    /* 2 */
-                   inner.left,  inner.top     /* 3 */);
+      gc->triangle_fill(gc, tl, inner.left,  inner.bottom, /* 1 */
+                                outer.left,  outer.top,    /* 2 */
+                                inner.left,  inner.top     /* 3 */);
 
-      tri_fill(tl, outer.left,  outer.top,    /* 2 */
-                   inner.left,  inner.top,    /* 3 */
-                   outer.right, outer.top   /* 4 */ );
+      gc->triangle_fill(gc, tl, outer.left,  outer.top,    /* 2 */
+                                inner.left,  inner.top,    /* 3 */
+                                outer.right, outer.top   /* 4 */ );
 
-      tri_fill(tl, inner.left,  inner.top,    /* 3 */
-                   outer.right, outer.top,    /* 4 */
-                   inner.right, inner.top     /* 5 */);
+      gc->triangle_fill(gc, tl, inner.left,  inner.top,    /* 3 */
+                                outer.right, outer.top,    /* 4 */
+                                inner.right, inner.top     /* 5 */);
 
       /*              /0
                      1 |
@@ -213,21 +216,21 @@ static void border_intdraw(borderedges_t *edges,
            5---------3 |
          4/------------2
        */
-      tri_fill(br, outer.right,  outer.top,    /* 0 */
-                   inner.right,  inner.top,    /* 1 */
-                   outer.right,  outer.bottom  /* 2 */);
+      gc->triangle_fill(gc, br, outer.right,  outer.top,    /* 0 */
+                                inner.right,  inner.top,    /* 1 */
+                                outer.right,  outer.bottom  /* 2 */);
 
-      tri_fill(br, inner.right,  inner.top,    /* 1 */
-                   outer.right,  outer.bottom, /* 2 */
-                   inner.right,  inner.bottom  /* 3 */);
+      gc->triangle_fill(gc, br, inner.right,  inner.top,    /* 1 */
+                                outer.right,  outer.bottom, /* 2 */
+                                inner.right,  inner.bottom  /* 3 */);
 
-      tri_fill(br, outer.right,  outer.bottom, /* 2 */
-                   inner.right,  inner.bottom, /* 3 */
-                   outer.left,   outer.bottom  /* 4 */ );
+      gc->triangle_fill(gc, br, outer.right,  outer.bottom, /* 2 */
+                                inner.right,  inner.bottom, /* 3 */
+                                outer.left,   outer.bottom  /* 4 */ );
 
-      tri_fill(br, inner.right,  inner.bottom, /* 3 */
-                   outer.left,   outer.bottom, /* 4 */
-                   inner.left,   inner.bottom  /* 5 */);
+      gc->triangle_fill(gc, br, inner.right,  inner.bottom, /* 3 */
+                                outer.left,   outer.bottom, /* 4 */
+                                inner.left,   inner.bottom  /* 5 */);
     }
   }
 #endif
@@ -236,7 +239,8 @@ static void border_intdraw(borderedges_t *edges,
 /*************************************************** Gerph *********
  Function:     border_draw
  Description:  Draw a border around a region
- Parameters:   type = the type of border we should draw
+ Parameters:   gc-> the context to use
+               type = the type of border we should draw
                edges = a block describing the size of the edges
                x,y,width,height = the thing that we're bordering,
                                       top left corner
@@ -244,10 +248,11 @@ static void border_intdraw(borderedges_t *edges,
                opp = the darker colour, or COLOUR_NONE
  Returns:      none
  ******************************************************************/
-void border_draw(bordertype_t type,
+void border_draw(gcontext_t *gc,
+                 bordertype_t type,
                  borderedges_t *edges,
                  int x, int y, int width, int height,
-                 unsigned long face, unsigned long opp)
+                 uint32_t face, uint32_t opp)
 {
   int hasborder;
   hasborder = (edges->top > 0 ||
@@ -262,7 +267,7 @@ void border_draw(bordertype_t type,
 
   if (face == COLOUR_NONE || opp == COLOUR_NONE)
   {
-    unsigned long colour;
+    uint32_t colour;
     if (face == COLOUR_NONE) colour = opp;
     else                     colour = face;
     if (type != bt_solid &&
@@ -279,7 +284,7 @@ void border_draw(bordertype_t type,
     default:
     case bt_solid:
       dprintf("solid\n");
-      border_intdraw(edges, x,y,width,height, opp, opp);
+      border_intdraw(gc, edges, x,y,width,height, opp, opp);
       break;
 
     case bt_double:
@@ -291,21 +296,21 @@ void border_draw(bordertype_t type,
         outer.right = (edges->right+1)/3;
         outer.bottom = (edges->bottom+1)/3;
         inner = outer;
-        border_intdraw(&outer, x,y,width,height, opp, opp);
+        border_intdraw(gc, &outer, x,y,width,height, opp, opp);
         x+= edges->left - inner.left;
         y-= edges->top - inner.top;
         width -=  (edges->right - inner.right) + (edges->left - inner.left);
         height -=  (edges->bottom - inner.bottom) + (edges->top - inner.top);
-        border_intdraw(&inner, x,y,width,height, opp, opp);
+        border_intdraw(gc, &inner, x,y,width,height, opp, opp);
       }
       break;
 
     case bt_inset:
-      border_intdraw(edges, x,y,width,height, opp, face);
+      border_intdraw(gc, edges, x,y,width,height, opp, face);
       break;
 
     case bt_outset:
-      border_intdraw(edges, x,y,width,height, face, opp);
+      border_intdraw(gc, edges, x,y,width,height, face, opp);
       break;
 
     case bt_ridge:
@@ -317,12 +322,12 @@ void border_draw(bordertype_t type,
         outer.right = edges->right/2;
         outer.bottom = edges->bottom/2;
         inner = outer;
-        border_intdraw(&outer, x,y,width,height, face, opp);
+        border_intdraw(gc, &outer, x,y,width,height, face, opp);
         x+= inner.left;
         y-= inner.top;
         width -=  inner.right + inner.left;
         height -=  inner.bottom + inner.top;
-        border_intdraw(&inner, x,y,width,height, opp, face);
+        border_intdraw(gc, &inner, x,y,width,height, opp, face);
       }
       break;
 
@@ -335,12 +340,12 @@ void border_draw(bordertype_t type,
         outer.right = edges->right/2;
         outer.bottom = edges->bottom/2;
         inner = outer;
-        border_intdraw(&outer, x,y,width,height, opp, face);
+        border_intdraw(gc, &outer, x,y,width,height, opp, face);
         x+= inner.left;
         y-= inner.top;
         width -= inner.right + inner.left;
         height -=  inner.bottom + inner.top;
-        border_intdraw(&inner, x,y,width,height, face, opp);
+        border_intdraw(gc, &inner, x,y,width,height, face, opp);
       }
       break;
   }
@@ -350,7 +355,8 @@ void border_draw(bordertype_t type,
 /*************************************************** Gerph *********
  Function:     border_drawsimple
  Description:  Draw a simplified border
- Parameters:   type = the type of border we should draw
+ Parameters:   gc-> the context to use
+               type = the type of border we should draw
                size = the border size
                x,y,width,height = the thing that we're bordering,
                                       top left corner
@@ -358,13 +364,14 @@ void border_draw(bordertype_t type,
                opp = the darker colour, or COLOUR_NONE
  Returns:      none
  ******************************************************************/
-void border_drawsimple(bordertype_t type, int size,
+void border_drawsimple(gcontext_t *gc,
+                       bordertype_t type, int size,
                        int x, int y, int width, int height,
-                       unsigned long face, unsigned long opp)
+                       uint32_t face, uint32_t opp)
 {
   borderedges_t edges;
   edges.top = edges.left = edges.right = edges.bottom = size;
-  border_draw(type,&edges,x,y,width,height,face,opp);
+  border_draw(gc, type,&edges,x,y,width,height,face,opp);
 }
 
 
@@ -379,7 +386,8 @@ void border_drawsimple(bordertype_t type, int size,
                                       top left corner
  Returns:      none
  ******************************************************************/
-void border_drawfull(bordercolours_t *colours,
+void border_drawfull(gcontext_t *gc,
+                     bordercolours_t *colours,
                      borderedges_t *edges,
                      int x, int y, int width, int height)
 {
@@ -425,16 +433,16 @@ void border_drawfull(bordercolours_t *colours,
         }
         if (xa == xc && xb == xd)
         {
-            rect_fill(col, xa, ya, xd, yd);
+            gc->rectangle_fill(gc, col, xa, ya, xd, yd);
         }
         else
         {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
+            gc->triangle_fill(gc, col, xa, ya,
+                                       xc, yc,
+                                       xb, yb);
+            gc->triangle_fill(gc, col, xc, yc,
+                                       xb, yb,
+                                       xd, yd);
         }
     }
 
@@ -465,16 +473,16 @@ void border_drawfull(bordercolours_t *colours,
         }
         if (ya == yb && yc == yd)
         {
-            rect_fill(col, xa, ya, xd, yd);
+            gc->rectangle_fill(gc, col, xa, ya, xd, yd);
         }
         else
         {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
+            gc->triangle_fill(gc, col, xa, ya,
+                                       xc, yc,
+                                       xb, yb);
+            gc->triangle_fill(gc, col, xc, yc,
+                                       xb, yb,
+                                       xd, yd);
         }
     }
 
@@ -505,16 +513,16 @@ void border_drawfull(bordercolours_t *colours,
         }
         if (xa == xc && xb == xd)
         {
-            rect_fill(col, xa, ya, xd, yd);
+            gc->rectangle_fill(gc, col, xa, ya, xd, yd);
         }
         else
         {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
+            gc->triangle_fill(gc, col, xa, ya,
+                                       xc, yc,
+                                       xb, yb);
+            gc->triangle_fill(gc, col, xc, yc,
+                                       xb, yb,
+                                       xd, yd);
         }
     }
 
@@ -545,16 +553,16 @@ void border_drawfull(bordercolours_t *colours,
         }
         if (ya == yb && yc == yd)
         {
-            rect_fill(col, xa, ya, xd, yd);
+            gc->rectangle_fill(gc, col, xa, ya, xd, yd);
         }
         else
         {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
+            gc->triangle_fill(gc, col, xa, ya,
+                                       xc, yc,
+                                       xb, yb);
+            gc->triangle_fill(gc, col, xc, yc,
+                                       xb, yb,
+                                       xd, yd);
         }
     }
 }

@@ -27,12 +27,13 @@
 /*************************************************** Gerph *********
  Function:     vdu5_findfont
  Description:  Find a font
- Parameters:   fontname-> the name of the font to find
+ Parameters:   gc-> graphics context
+               fontname-> the name of the font to find
                xsize = the size (points * 16)
                ysize = the size (points * 16)
- Returns:      font handle, or -1 if could not claim
+ Returns:      font handle, or FONT_NONE if could not claim
  ******************************************************************/
-font_t vdu5_findfont(const char *name, int xsize, int ysize)
+font_t vdu5_findfont(gcontext_t *gc, const char *name, int xsize, int ysize)
 {
   uint32_t composite;
   uint32_t xeig, yeig;
@@ -51,10 +52,11 @@ font_t vdu5_findfont(const char *name, int xsize, int ysize)
 /*************************************************** Gerph *********
  Function:     vdu5_losefont
  Description:  Lose a font we've claimed
- Parameters:   fh = the handle to lose
+ Parameters:   gc-> graphics context
+               fh = the handle to lose
  Returns:      none
  ******************************************************************/
-void vdu5_losefont(font_t fh)
+void vdu5_losefont(gcontext_t *gc, font_t fh)
 {
   /* Nothing to do to lose the font */
 }
@@ -63,10 +65,11 @@ void vdu5_losefont(font_t fh)
 /*************************************************** Gerph *********
  Function:     vdu5_getem
  Description:  Return the em size
- Parameters:   fh = the font handle, or NULL for system font
+ Parameters:   gc-> graphics context
+               fh = the font handle, or NULL for system font
  Returns:      bounds for the em
  ******************************************************************/
-bounds_t vdu5_getem(font_t fh)
+bounds_t vdu5_getem(gcontext_t *gc, font_t fh)
 {
   bounds_t bounds;
   uint32_t composite = (uint32_t) fh;
@@ -84,7 +87,8 @@ bounds_t vdu5_getem(font_t fh)
 /*************************************************** Gerph *********
  Function:     vdu5_getstringsize
  Description:  Return the size of the string into the structure
- Parameters:   fh = the font handle
+ Parameters:   gc-> graphics context
+               fh = the font handle
                bounds-> the box to fill in
                xlimit = the widest the string may be, or -1 for unlimited
                str-> the string to read
@@ -92,7 +96,7 @@ bounds_t vdu5_getem(font_t fh)
                splitchar = character to split on, or 0 for none
  Returns:      none
  ******************************************************************/
-void vdu5_getstringsize(font_t fh, stringbounds_t *bounds,
+void vdu5_getstringsize(gcontext_t *gc, font_t fh, stringbounds_t *bounds,
                         int xlimit,
                         const char *str, int strsize, char split_char)
 {
@@ -115,7 +119,7 @@ void vdu5_getstringsize(font_t fh, stringbounds_t *bounds,
     /* we only need to worry about splitting if the string would be longer than the limit */
     if (split_char == 0)
     {
-      len = xlimit / xsize; /* rounds down, which is what we want */
+      len = (int)(xlimit / xsize); /* rounds down, which is what we want */
     }
     else
     {
@@ -144,8 +148,8 @@ void vdu5_getstringsize(font_t fh, stringbounds_t *bounds,
     }
   }
 
-  bounds->ascent = ysize * 28 / 32;
-  bounds->descent = ysize - bounds->ascent;
+  bounds->ascent = (int)(ysize * 28 / 32);
+  bounds->descent = (int)(ysize - bounds->ascent);
   bounds->lbearing = 0;
   bounds->rbearing = 0;
   bounds->xoffset = len;
@@ -154,7 +158,8 @@ void vdu5_getstringsize(font_t fh, stringbounds_t *bounds,
 /*************************************************** Gerph *********
  Function:     font_paint
  Description:  Paint our font somewhere
- Parameters:   handle = the font handle
+ Parameters:   gc-> graphics context
+               handle = the font handle
                x = the x position to plot at (OS units)
                y = the y position to plot at (OS units)
                    (of the left base line)
@@ -163,7 +168,7 @@ void vdu5_getstringsize(font_t fh, stringbounds_t *bounds,
                len = the number of characters to plot, or -1 for all
  Returns:      coords_t for the end position
  ******************************************************************/
-coords_t vdu5_paint(font_t fh, int x, int y,
+coords_t vdu5_paint(gcontext_t *gc, font_t fh, int x, int y,
                     uint32_t bg, uint32_t fg,
                     const char *str, int strsize)
 {
@@ -187,10 +192,10 @@ coords_t vdu5_paint(font_t fh, int x, int y,
 
   move(x, y + (ysize * 28 / 32));
   gcol(fg);
-  seq[5] = xsize % 256;
-  seq[6] = xsize / 256;
-  seq[7] = ysize % 256;
-  seq[8] = ysize / 256;
+  seq[5] = (int)(xsize % 256);
+  seq[6] = (int)(xsize / 256);
+  seq[7] = (int)(ysize % 256);
+  seq[8] = (int)(ysize / 256);
   if (strsize == 1)
   {
       seq[11] = *str;
@@ -203,8 +208,8 @@ coords_t vdu5_paint(font_t fh, int x, int y,
       _swix(OS_WriteI + 4, 0);
   }
 
-  end.x = x + xsize * (strsize<<xeig);
-  end.y = y;
+  end.x = (int)(x + xsize * (strsize<<xeig));
+  end.y = (int)y;
   return end;
 }
 
@@ -212,7 +217,8 @@ coords_t vdu5_paint(font_t fh, int x, int y,
 /*************************************************** Gerph *********
  Function:     vdu5_paintattrib
  Description:  Put a string, with the given attributes
- Parameters:   fonthandle = the handle to plot with
+ Parameters:   gc-> graphics context
+               fonthandle = the handle to plot with
                x0,y0,x1,y1 = box to centre in
                str-> the string to use
                len = the length to use
@@ -220,7 +226,7 @@ coords_t vdu5_paint(font_t fh, int x, int y,
                attrib = the attributes to use
  Returns:      coords_t for the end position
  ******************************************************************/
-coords_t vdu5_paintattrib(font_t fh, int x0, int y0, int x1, int y1,
+coords_t vdu5_paintattrib(gcontext_t *gc, font_t fh, int x0, int y0, int x1, int y1,
                           const char *str, int strsize,
                           uint32_t bg, uint32_t fg,
                           uint32_t attr)
@@ -230,8 +236,8 @@ coords_t vdu5_paintattrib(font_t fh, int x0, int y0, int x1, int y1,
     coords_t end;
 
     /* Correct for the _paint function wanting the baseline */
-    int yb = y1 - ((ysize * 28) / 32);
-    end = vdu5_paint(fh, x0, yb, bg, fg, str, strsize);
+    int yb = ((int)y1) - (int)((ysize * 28) / 32);
+    end = vdu5_paint(gc, fh, x0, yb, bg, fg, str, strsize);
     end.y = y1;
 
     return end;

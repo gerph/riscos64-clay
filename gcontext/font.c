@@ -47,31 +47,26 @@ struct font_s {
 /*************************************************** Gerph *********
  Function:     font_findfont
  Description:  Find a font
- Parameters:   fontname-> the name of the font to find
+ Parameters:   gc-> graphics context
+               fontname-> the name of the font to find
                xsize = the size (points * 16)
                ysize = the size (points * 16)
- Returns:      font handle, or NULL if could not claim
+ Returns:      font handle, or FONT_NONE if could not claim
  ******************************************************************/
-font_t font_findfont(const char *fontname, int xsize, int ysize)
+font_t font_findfont(gcontext_t *gc, const char *fontname, int xsize, int ysize)
 {
   _kernel_oserror *err;
-  font_t font;
-  int32_t handle;
+  font_t font = calloc(1, sizeof(*font));
+  if (font == 0)
+    return FONT_NONE;
   err = _swix(Font_FindFont, _INR(1,5)|_OUT(0), fontname, xsize, ysize, 0, 0,
-                                                &handle);
+                                                &font->handle);
   if (err)
   {
     dprintf("FAILED: Could not find font %s\n", fontname);
     free(font);
-    return NULL;
+    return FONT_NONE;
   }
-  font = calloc(1, sizeof(*font));
-  if (font == NULL)
-  {
-    _swix(Font_LoseFont, _IN(0), handle);
-    return NULL;
-  }
-  font->handle = handle;
   font->xsize = xsize;
   font->ysize = ysize;
   font->ascent = 0;
@@ -86,10 +81,11 @@ font_t font_findfont(const char *fontname, int xsize, int ysize)
 /*************************************************** Gerph *********
  Function:     font_losefont
  Description:  Lose a font we've claimed
- Parameters:   handle = the handle to lose
+ Parameters:   gc-> graphics context
+               font = the handle to lose
  Returns:      none
  ******************************************************************/
-void font_losefont(font_t font)
+void font_losefont(gcontext_t *gc, font_t font)
 {
   if (font == NULL)
     return;
@@ -100,7 +96,8 @@ void font_losefont(font_t font)
 /*************************************************** Gerph *********
  Function:     font_paint
  Description:  Paint our font somewhere
- Parameters:   handle = the font handle
+ Parameters:   gc-> graphics context
+               font = the font handle
                x = the x position to plot at (OS units)
                y = the y position to plot at (OS units)
                    (of the left base line)
@@ -109,7 +106,7 @@ void font_losefont(font_t font)
                len = the number of characters to plot, or -1 for all
  Returns:      coords_t for the end position
  ******************************************************************/
-coords_t font_paint(font_t font, int x, int y,
+coords_t font_paint(gcontext_t *gc, font_t font, int x, int y,
                     uint32_t bg, uint32_t fg,
                     const char *str, int len)
 {
@@ -152,15 +149,16 @@ coords_t font_paint(font_t font, int x, int y,
 /*************************************************** Gerph *********
  Function:     font_getem
  Description:  Return the em size
- Parameters:   font = the font handle, or NULL for system font
+ Parameters:   gc-> graphics context
+               font = the font handle, or NULL for system font
                bounds-> the box to fill in
  Returns:      bounds for the em
  ******************************************************************/
-bounds_t font_getem(font_t font)
+bounds_t font_getem(gcontext_t *gc, font_t font)
 {
   bounds_t bounds;
   stringbounds_t stringbounds;
-  if (font == NULL)
+  if (font == FONT_NONE)
   {
     bounds.width = 16;
     bounds.height = 32;
@@ -173,7 +171,7 @@ bounds_t font_getem(font_t font)
     return font->em;
   }
 
-  font_getstringsize(font, &stringbounds, -1, "M", 1, 0);
+  font_getstringsize(gc, font, &stringbounds, -1, "M", 1, 0);
   dprintf("String bounds for M were %i, %i, %i\n", stringbounds.lbearing, stringbounds.xoffset, stringbounds.rbearing);
   font->em.width = -stringbounds.lbearing + stringbounds.xoffset + stringbounds.rbearing;
   font->em.height = stringbounds.ascent + stringbounds.descent;
@@ -184,7 +182,8 @@ bounds_t font_getem(font_t font)
 /*************************************************** Gerph *********
  Function:     font_getstringsize
  Description:  Return the size of the string into the structure
- Parameters:   font = the font handle, or NULL for system font
+ Parameters:   gc-> graphics context
+               font = the font handle, or NULL for system font
                bounds-> the box to fill in
                xlimit = the widest the string may be in OS units, or -1 for unlimited
                str-> the string to read
@@ -192,7 +191,7 @@ bounds_t font_getem(font_t font)
                splitchar = character to split on, or 0 for none
  Returns:      none
  ******************************************************************/
-void font_getstringsize(font_t font, stringbounds_t *bounds,
+void font_getstringsize(gcontext_t *gc, font_t font, stringbounds_t *bounds,
                         int32_t xlimit,
                         const char *str, int len, char split_char)
 {
@@ -282,7 +281,8 @@ void font_getstringsize(font_t font, stringbounds_t *bounds,
 /*************************************************** Gerph *********
  Function:     font_paintattrib
  Description:  Put a string, with the given attributes
- Parameters:   font = the handle to plot with
+ Parameters:   gc-> graphics context
+               font = the handle to plot with
                x0,y0,x1,y1 = box to centre in
                str-> the string to use
                len = the length to use
@@ -290,7 +290,8 @@ void font_getstringsize(font_t font, stringbounds_t *bounds,
                attrib = the attributes to use
  Returns:      coords_t for the end position
  ******************************************************************/
-coords_t font_paintattrib(font_t font, int32_t x0, int32_t y0, int32_t x1, int32_t y1,
+coords_t font_paintattrib(gcontext_t *gc, font_t font,
+                          int32_t x0, int32_t y0, int32_t x1, int32_t y1,
                           const char *str, int32_t len,
                           uint32_t bg, uint32_t fg,
                           uint32_t attrib)
@@ -300,7 +301,7 @@ coords_t font_paintattrib(font_t font, int32_t x0, int32_t y0, int32_t x1, int32
   int32_t x,y;
   coords_t end = {0};
 
-  font_getstringsize(font, &bounds, -1, str, len, 0);
+  font_getstringsize(gc, font, &bounds, -1, str, len, 0);
   strwidth = bounds.lbearing + bounds.rbearing + bounds.xoffset;
   strheight = bounds.ascent + bounds.descent;
   switch (attrib & FONTATTRIB_ALIGN_HMASK)
@@ -351,13 +352,13 @@ retry_left:
 
   dprintf("Plot string %p at %i, %i (bg=%08lx, fg=%08lx) -> %i, %i\n", str, x, y, bg, fg, end.x, end.y);
 
-  font_paint(font, x, y, bg, fg, str, len);
+  font_paint(gc, font, x, y, bg, fg, str, len);
 
   if (attrib & FONTATTRIB_UNDERLINE)
   {
-    line_start(fg);
-    line(x,y, x+bounds.xoffset, y);
-    line_end();
+    gc->line_start(gc, fg);
+    gc->line_line(gc, x,y, x+bounds.xoffset, y);
+    gc->line_end(gc);
   }
 
 #if 0
