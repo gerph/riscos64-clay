@@ -58,4 +58,19 @@ void border_drawsimple(bordertype_t type, int size,
                        int x, int y, int width, int height,
                        unsigned long face, unsigned long opp);
 
+
+/*************************************************** Gerph *********
+ Function:     border_drawfull
+ Description:  Draw a border around a region with fully specified colours
+ Parameters:   colours = a block describing the colours of the edges,
+                         or COLOUR_NONE for no colour.
+               edges = a block describing the size of the edges
+               x,y,width,height = the thing that we're bordering,
+                                      top left corner
+ Returns:      none
+ ******************************************************************/
+void border_drawfull(bordercolours_t *colours,
+                     borderedges_t *edges,
+                     int x, int y, int width, int height);
+
 #endif

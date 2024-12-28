@@ -9,6 +9,7 @@ node_modules/
 *.elf
 *.map
 *.o
+*.a
 *,ff8
 *.syms
 

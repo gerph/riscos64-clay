@@ -82,197 +82,6 @@ static void PlotText(Clay_RenderCommand *command) {
 }
 
 
-/*************************************************** Gerph *********
- Function:     border_drawfull
- Description:  Draw a border around a region with fully specified colours
- Parameters:   colours = a block describing the colours of the edges,
-                         or COLOUR_NONE for no colour.
-               edges = a block describing the size of the edges
-               x,y,width,height = the thing that we're bordering,
-                                      top left corner
- Returns:      none
- ******************************************************************/
-void border_drawfull(bordercolours_t *colours,
-                     borderedges_t *edges,
-                     int x, int y, int width, int height)
-{
-    borderedges_t outer;
-    borderedges_t inner;
-    outer.top = y + height;
-    outer.bottom = y;
-    outer.left = x;
-    outer.right = x + width;
-    inner.top = y + height - edges->top;
-    inner.right = x + width - edges->right;
-    inner.bottom = y + edges->bottom;
-    inner.left = x + edges->left;
-
-    /* Shapes are in the form:
-        a b
-        c d
-     */
-    if (edges->top > 0 && colours->top != COLOUR_NONE)
-    {
-        uint32_t col = colours->top;
-        int xa, ya;
-        int xb, yb;
-        int xc, yc;
-        int xd, yd;
-        xa = outer.left;    ya = outer.top;
-        xb = outer.right;   yb = outer.top;
-        if (edges->left > 0 && colours->left != COLOUR_NONE)
-        {
-            xc = inner.left;    yc = inner.top;
-        }
-        else
-        {
-            xc = outer.left;    yc = inner.top;
-        }
-        if (edges->right > 0 && colours->right != COLOUR_NONE)
-        {
-            xd = inner.right;   yd = inner.top;
-        }
-        else
-        {
-            xd = outer.right;   yd = inner.top;
-        }
-        if (xa == xc && xb == xd)
-        {
-            rect_fill(col, xa, ya, xd, yd);
-        }
-        else
-        {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
-        }
-    }
-
-    if (edges->right > 0 && colours->right != COLOUR_NONE)
-    {
-        uint32_t col = colours->right;
-        int xa, ya;
-        int xb, yb;
-        int xc, yc;
-        int xd, yd;
-        xb = outer.right;   yb = outer.top;
-        xd = outer.right;   yd = outer.bottom;
-        if (edges->top > 0 && colours->top != COLOUR_NONE)
-        {
-            xa = inner.right;   ya = inner.top;
-        }
-        else
-        {
-            xa = inner.right;   ya = outer.top;
-        }
-        if (edges->bottom > 0 && colours->bottom != COLOUR_NONE)
-        {
-            xc = inner.right;   yc = inner.bottom;
-        }
-        else
-        {
-            xc = inner.right;   yc = outer.bottom;
-        }
-        if (ya == yb && yc == yd)
-        {
-            rect_fill(col, xa, ya, xd, yd);
-        }
-        else
-        {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
-        }
-    }
-
-    if (edges->bottom > 0 && colours->bottom != COLOUR_NONE)
-    {
-        uint32_t col = colours->bottom;
-        int xa, ya;
-        int xb, yb;
-        int xc, yc;
-        int xd, yd;
-        xc = outer.left;    yc = outer.bottom;
-        xd = outer.right;   yd = outer.bottom;
-        if (edges->left > 0 && colours->left != COLOUR_NONE)
-        {
-            xa = inner.left;    ya = inner.bottom;
-        }
-        else
-        {
-            xa = outer.left;    ya = inner.bottom;
-        }
-        if (edges->right > 0 && colours->right != COLOUR_NONE)
-        {
-            xb = inner.right;   yb = inner.bottom;
-        }
-        else
-        {
-            xb = outer.right;   yb = inner.bottom;
-        }
-        if (xa == xc && xb == xd)
-        {
-            rect_fill(col, xa, ya, xd, yd);
-        }
-        else
-        {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
-        }
-    }
-
-    if (edges->left > 0 && colours->left != COLOUR_NONE)
-    {
-        uint32_t col = colours->left;
-        int xa, ya;
-        int xb, yb;
-        int xc, yc;
-        int xd, yd;
-        xa = outer.left;    ya = outer.top;
-        xc = outer.left;    yc = outer.bottom;
-        if (edges->top > 0 && colours->top != COLOUR_NONE)
-        {
-            xb = inner.left;    yb = inner.top;
-        }
-        else
-        {
-            xb = inner.left;    yb = outer.top;
-        }
-        if (edges->bottom > 0 && colours->bottom != COLOUR_NONE)
-        {
-            xd = inner.left;    yd = inner.bottom;
-        }
-        else
-        {
-            xd = inner.left;    yd = outer.bottom;
-        }
-        if (ya == yb && yc == yd)
-        {
-            rect_fill(col, xa, ya, xd, yd);
-        }
-        else
-        {
-            tri_fill(col, xa, ya,
-                          xc, yc,
-                          xb, yb);
-            tri_fill(col, xc, yc,
-                          xb, yb,
-                          xd, yd);
-        }
-    }
-}
-
-
 
 // Layout the first page.
 void Layout() {
@@ -377,20 +186,20 @@ int main(int argc, char *argv[])
     screen_get_size(&screen);
 #endif
 
-    printf("1\n");
+    dprintf("1\n");
     uint64_t totalMemorySize = Clay_MinMemorySize();
-    printf("2\n");
+    dprintf("2\n");
     Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(totalMemorySize, malloc(totalMemorySize));
-    printf("3\n");
+    dprintf("3\n");
     Clay_Initialize(arena, (Clay_Dimensions) { screenWidth, screenHeight });
-    printf("4\n");
+    dprintf("4\n");
     Clay_SetMeasureTextFunction(MeasureText);
-    printf("5\n");
+    dprintf("5\n");
     Clay_BeginLayout();
-    printf("6\n");
+    dprintf("6\n");
 
     Layout();
-    printf("7\n");
+    dprintf("7\n");
 
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();
 

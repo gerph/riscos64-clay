@@ -19,7 +19,7 @@ APP_OBJS = riscos.o
 all: example,ff8
 
 gcontext/gcontext.a: ${GCONTEXT_OBJS}
-	riscos64-libfile -c $@ $?
+	riscos64-libfile -c $@ ${GCONTEXT_OBJS}
 
 example,ff8: gcontext/gcontext.a ${APP_OBJS}
 	riscos64-link -o $@ ${APP_OBJS} gcontext/gcontext.a
