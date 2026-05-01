@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 ubuntu:20.04
+FROM --platform=linux/amd64 ubuntu:26.04
 
 RUN apt update -y
 RUN DEBIAN_FRONTEND=noninteractive apt install -y build-essential
